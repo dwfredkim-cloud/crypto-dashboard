@@ -224,17 +224,17 @@
       <div class="metric-sub neutral" id="fed-date">—</div>
     </div>
     <div class="metric">
-      <div class="metric-label">미 10Y 국채 <span class="data-source">Yahoo</span></div>
+      <div class="metric-label">미 10Y 국채 <span class="data-source">AV</span></div>
       <div class="metric-value" id="us10y">—</div>
       <div class="metric-sub" id="us10y-chg">—</div>
     </div>
     <div class="metric">
-      <div class="metric-label">S&P 500 <span class="data-source">Yahoo</span></div>
+      <div class="metric-label">S&P 500 <span class="data-source">AV</span></div>
       <div class="metric-value" id="sp500">—</div>
       <div class="metric-sub" id="sp500-chg">—</div>
     </div>
     <div class="metric">
-      <div class="metric-label">DXY 달러지수 <span class="data-source">Yahoo</span></div>
+      <div class="metric-label">DXY 달러지수 <span class="data-source">AV</span></div>
       <div class="metric-value" id="dxy">—</div>
       <div class="metric-sub" id="dxy-chg">—</div>
     </div>
@@ -394,32 +394,30 @@ function switchPeriod(p,el){
   el.classList.add('active'); currentPeriod=p; drawBTCChart(p);
 }
 
-// ── Yahoo Finance (via Vercel proxy) ──
+// ── Alpha Vantage (via Netlify proxy) ──
 async function fetchMacro(){
   try{
-    // stooq.com - S&P500, US10Y, DXY
     const pairs = [
-      { sym: '^spx', id: 'sp500', chgId: 'sp500-chg', fmt: v=>fmt(v), pct: true },
-      { sym: '^tnx', id: 'us10y', chgId: 'us10y-chg', fmt: v=>v.toFixed(2)+'%', pct: true },
-      { sym: 'dxy.f', id: 'dxy', chgId: 'dxy-chg', fmt: v=>v.toFixed(1), pct: true },
+      { sym: 'SPY',  id: 'sp500',  chgId: 'sp500-chg',  fmt: v=>'$'+fmt(v) },
+      { sym: 'IEF',  id: 'us10y',  chgId: 'us10y-chg',  fmt: v=>v.toFixed(2)+'%' },
+      { sym: 'UUP',  id: 'dxy',    chgId: 'dxy-chg',    fmt: v=>v.toFixed(1) },
     ];
-    await Promise.all(pairs.map(async p=>{
+    for(const p of pairs){
       try{
-        const r=await fetch(`${PROXY}?source=stooq&symbols=${p.sym}`);
+        const r=await fetch(`${PROXY}?source=alphavantage&symbols=${p.sym}`);
         const data=await r.json();
-        const q=data?.symbols?.[0];
-        if(q&&q.close){
-          setEl(p.id, p.fmt(q.close));
-          const chgPct = q.open ? ((q.close-q.open)/q.open*100) : 0;
+        const q=data?.['Global Quote'];
+        if(q&&q['05. price']){
+          const price=parseFloat(q['05. price']);
+          const chgPct=parseFloat((q['10. change percent']||'0%').replace('%',''));
+          setEl(p.id, p.fmt(price));
           setChg(p.chgId, chgPct);
         }
       }catch(e){}
-    }));
+      await new Promise(r=>setTimeout(r,1200));
+    }
   }catch(e){
     setEl('sp500','5,473'); setEl('us10y','4.28%'); setEl('dxy','98.7');
-    document.getElementById('sp500-chg').textContent='▲ +0.42%'; document.getElementById('sp500-chg').className='metric-sub up';
-    document.getElementById('us10y-chg').textContent='▼ -0.03%'; document.getElementById('us10y-chg').className='metric-sub down';
-    document.getElementById('dxy-chg').textContent='▼ -0.31%'; document.getElementById('dxy-chg').className='metric-sub down';
   }
 }
 
