@@ -25,14 +25,26 @@ exports.handler = async function(event) {
       const r = await fetch(url);
       data = await r.json();
 
-    } else if (source === 'bybit_futures') {
-      const url = 'https://api.bybit.com/v5/market/tickers?category=linear';
-      const r = await fetch(url);
+    } else if (source === 'okx_futures') {
+      const url = 'https://www.okx.com/api/v5/market/tickers?instType=SWAP';
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
       data = await r.json();
 
-    } else if (source === 'bybit_ls') {
-      const url = 'https://api.bybit.com/v5/market/account-ratio?category=linear&symbol=BTCUSDT&period=1h&limit=1';
-      const r = await fetch(url);
+    } else if (source === 'okx_funding') {
+      const instId = params.instId || 'BTC-USDT-SWAP';
+      const url = 'https://www.okx.com/api/v5/public/funding-rate?instId=' + instId;
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      data = await r.json();
+
+    } else if (source === 'okx_oi') {
+      const instId = params.instId || 'BTC-USDT-SWAP';
+      const url = 'https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?ccy=BTC&period=5m';
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      data = await r.json();
+
+    } else if (source === 'okx_ls') {
+      const url = 'https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy=BTC&period=5m';
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
       data = await r.json();
 
     } else {
