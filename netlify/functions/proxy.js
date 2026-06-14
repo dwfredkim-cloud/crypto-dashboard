@@ -47,6 +47,60 @@ exports.handler = async function(event) {
       const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
       data = await r.json();
 
+    } else if (source === 'etf_flow') {
+      // Yahoo Finance: IBIT 7일 히스토리로 ETF 순유입 추정
+      // period1 = 8일 전, period2 = 오늘 (unix timestamp)
+      const now = Math.floor(Date.now() / 1000);
+      const week = now - 8 * 86400;
+      // 주요 BTC ETF 티커들
+      const etfTickers = ['IBIT', 'FBTC', 'BITB', 'ARKB', 'BTCO'];
+      const results = [];
+      for (const ticker of etfTickers) {
+        try {
+          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&period1=${week}&period2=${now}`;
+          const r = await fetch(url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/json'
+            }
+          });
+          const json = await r.json();
+          const result = json?.chart?.result?.[0];
+          if (!result) continue;
+          const closes = result.indicators?.quote?.[0]?.close || [];
+          const volumes = result.indicators?.quote?.[0]?.volume || [];
+          const timestamps = result.timestamp || [];
+          // 최근 7거래일 데이터만
+          const days = Math.min(7, closes.length);
+          let netFlow = 0;
+          for (let i = closes.length - days; i < closes.length; i++) {
+            if (!closes[i] || !volumes[i]) continue;
+            // 순유입 추정: 전일 대비 가격 변화율 vs 거래량으로 방향 추정
+            // 단순히 volume * price 합산 (양방향이지만 대략적 규모)
+            netFlow += closes[i] * volumes[i];
+          }
+          results.push({ ticker, netFlow, days });
+        } catch(e) {
+          results.push({ ticker, error: e.message });
+        }
+      }
+      // IBIT만 정확한 AUM 추정에 사용
+      const ibit = results.find(r => r.ticker === 'IBIT');
+      data = { results, ibit, source: 'yahoo_finance' };
+
+    } else if (source === 'etf_ibit') {
+      // IBIT 단일 - 최근 종가 기준 AUM 추정
+      const now = Math.floor(Date.now() / 1000);
+      const week = now - 10 * 86400;
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/IBIT?interval=1d&period1=${week}&period2=${now}`;
+      const r = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json'
+        }
+      });
+      data = await r.json();
+
     } else {
       return { statusCode: 400, headers: headers, body: JSON.stringify({ error: 'Unknown source' }) };
     }
