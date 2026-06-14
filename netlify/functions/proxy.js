@@ -6,15 +6,14 @@ exports.handler = async function(event) {
   };
 
   const { source, symbols, series_id, path } = event.queryStringParameters || {};
+  const AV_KEY = process.env.ALPHA_VANTAGE_KEY || 'T44LJJ94IA9F2XPJ';
 
   try {
     let data;
 
-    if (source === 'stooq') {
-      // stooq.com - free, no auth needed
-      const sym = symbols || '^SPX';
-      const url = `https://stooq.com/q/l/?s=${sym}&f=sd2t2ohlcv&h&e=json`;
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (source === 'alphavantage') {
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbols}&apikey=${AV_KEY}`;
+      const r = await fetch(url);
       data = await r.json();
 
     } else if (source === 'fred') {
@@ -30,11 +29,6 @@ exports.handler = async function(event) {
 
     } else if (source === 'binance_ls') {
       const url = 'https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=5m&limit=1';
-      const r = await fetch(url);
-      data = await r.json();
-
-    } else if (source === 'coinglass_etf') {
-      const url = 'https://open-api.coinglass.com/public/v2/etf/bitcoin/flow';
       const r = await fetch(url);
       data = await r.json();
 
