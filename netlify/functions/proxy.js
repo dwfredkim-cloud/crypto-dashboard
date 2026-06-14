@@ -10,8 +10,10 @@ exports.handler = async function(event) {
   try {
     let data;
 
-    if (source === 'yahoo_quote') {
-      const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`;
+    if (source === 'stooq') {
+      // stooq.com - free, no auth needed
+      const sym = symbols || '^SPX';
+      const url = `https://stooq.com/q/l/?s=${sym}&f=sd2t2ohlcv&h&e=json`;
       const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
       data = await r.json();
 
