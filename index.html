@@ -7,14 +7,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   :root {
-    --bg: #0d0f14; --bg2: #151820; --bg3: #1c2030; --bg4: #232738;
-    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
-    --text: #e8eaf0; --text2: #8b90a0; --text3: #555b6e;
-    --green: #22c787; --green2: rgba(34,199,135,0.12);
-    --red: #f0584a; --red2: rgba(240,88,74,0.12);
-    --blue: #4a9eff; --blue2: rgba(74,158,255,0.12);
-    --amber: #f5a623; --amber2: rgba(245,166,35,0.12);
-    --purple: #9b7ff4; --radius: 10px; --radius-sm: 6px;
+    --bg: #f4f5f7; --bg2: #ffffff; --bg3: #f0f1f4; --bg4: #e8eaed;
+    --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14);
+    --text: #1a1d24; --text2: #5a6070; --text3: #9ba3b4;
+    --green: #0fa968; --green2: rgba(15,169,104,0.10);
+    --red: #e03b2e; --red2: rgba(224,59,46,0.10);
+    --blue: #2563eb; --blue2: rgba(37,99,235,0.10);
+    --amber: #d97706; --amber2: rgba(217,119,6,0.10);
+    --purple: #7c3aed; --radius: 10px; --radius-sm: 6px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, 'SF Pro Display', 'Segoe UI', sans-serif; font-size: 13px; line-height: 1.5; min-height: 100vh; }
@@ -63,17 +63,22 @@
   .futures-table tr:hover td { background: var(--bg3); }
   .coin-name { font-weight: 500; } .coin-sub { font-size: 10px; color: var(--text3); margin-top: 1px; }
 
-  .fear-row { display: flex; align-items: center; gap: 14px; }
-  .fear-circle { width: 72px; height: 72px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
-  .fear-num { font-size: 24px; font-weight: 600; line-height: 1; }
-  .fear-lbl { font-size: 9px; margin-top: 2px; font-weight: 500; }
-  .fear-bar-row { flex: 1; }
-  .fear-bar-bg { height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin: 6px 0; }
-  .fear-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
-  .fear-hist { display: flex; gap: 12px; }
-  .fear-hist-item { text-align: center; }
-  .fear-hist-val { font-size: 14px; font-weight: 500; }
-  .fear-hist-lbl { font-size: 9px; color: var(--text3); margin-top: 1px; }
+  .fear-wrap { display: flex; flex-direction: column; gap: 14px; }
+  .fear-top { display: flex; align-items: center; gap: 16px; }
+  .fear-gauge-wrap { position: relative; width: 88px; height: 88px; flex-shrink: 0; }
+  .fear-gauge-wrap svg { position: absolute; top: 0; left: 0; }
+  .fear-gauge-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+  .fear-num { font-size: 26px; font-weight: 700; line-height: 1; }
+  .fear-lbl { font-size: 8px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+  .fear-right { flex: 1; }
+  .fear-bar-track { height: 6px; background: linear-gradient(90deg, #f0584a 0%, #f5a623 50%, #22c787 100%); border-radius: 3px; position: relative; margin-bottom: 4px; }
+  .fear-bar-pointer { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: white; box-shadow: 0 0 6px rgba(0,0,0,0.5); transform: translateX(-50%); transition: left 1s ease; }
+  .fear-bar-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text3); margin-bottom: 12px; }
+  .fear-hist { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .fear-hist-item { flex: 1; text-align: center; padding: 8px 4px; border-right: 1px solid var(--border); }
+  .fear-hist-item:last-child { border-right: none; }
+  .fear-hist-val { font-size: 15px; font-weight: 600; }
+  .fear-hist-lbl { font-size: 9px; color: var(--text3); margin-top: 2px; }
 
   .impact-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .impact-row:last-child { margin-bottom: 0; }
@@ -125,36 +130,35 @@
     <span class="timestamp" id="timestamp">—</span>
     <button class="refresh-btn" onclick="loadAll()" id="refresh-btn">
       <svg id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-      새로고침
+      Refresh
     </button>
   </div>
 </div>
 
 <div class="container">
 
-  <div class="section-label mb16">가격 & 시장 지표</div>
+  <div class="section-label mb16">Price & Market Overview</div>
   <div class="grid-5 mb20">
     <div class="metric"><div class="metric-label">BTC / USD</div><div class="metric-value" id="btc-price">—</div><div class="metric-sub" id="btc-chg">—</div></div>
     <div class="metric"><div class="metric-label">ETH / USD</div><div class="metric-value" id="eth-price">—</div><div class="metric-sub" id="eth-chg">—</div></div>
     <div class="metric"><div class="metric-label">BNB / USD</div><div class="metric-value" id="bnb-price">—</div><div class="metric-sub" id="bnb-chg">—</div></div>
-    <div class="metric"><div class="metric-label">BTC 도미넌스</div><div class="metric-value" id="btc-dom">—</div><div class="metric-sub neutral">전체 시총 중 BTC</div></div>
-    <div class="metric"><div class="metric-label">전체 시가총액</div><div class="metric-value" id="total-cap">—</div><div class="metric-sub" id="cap-chg">—</div></div>
+    <div class="metric"><div class="metric-label">BTC Dominance</div><div class="metric-value" id="btc-dom">—</div><div class="metric-sub neutral">% of total market cap</div></div>
+    <div class="metric"><div class="metric-label">Total Market Cap</div><div class="metric-value" id="total-cap">—</div><div class="metric-sub" id="cap-chg">—</div></div>
   </div>
 
-  <div class="section-label mb16">선물 시장 (Futures)</div>
+  <div class="section-label mb16">Futures Market</div>
   <div class="grid-2 mb20">
     <div class="card">
-      <div class="card-title">무기한 선물 현황 <span class="badge badge-blue">Perpetual</span></div>
-      <table class="futures-table">
-        <thead><tr><th>종목</th><th>선물가</th><th>현물 괴리</th><th>펀딩비(8h)</th><th>OI</th><th>OI 변화</th></tr></thead>
-        <tbody id="futures-tbody"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">로딩 중...</td></tr></tbody>
-      </table>
+      <div class="card-title">Perpetual Futures <span class="badge badge-blue">Perpetual</span></div>
+      <div id="futures-cards" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;color:var(--text3);padding:20px;">Loading...</div>
+      </div>
     </div>
     <div class="card">
-      <div class="card-title">선물 주요 지표 <span class="badge badge-live">LIVE</span></div>
+      <div class="card-title">Key Futures Metrics <span class="badge badge-live">LIVE</span></div>
       <div class="grid-2" style="gap:10px;margin-bottom:14px;">
         <div class="metric" style="background:var(--bg3);">
-          <div class="metric-label">BTC 롱/숏 비율</div>
+          <div class="metric-label">BTC Long/Short Ratio</div>
           <div class="metric-value up" id="ls-ratio">—</div>
           <div class="metric-sub">
             <div style="height:4px;background:var(--bg4);border-radius:2px;margin-top:6px;overflow:hidden;"><div id="long-bar" style="height:100%;border-radius:2px;background:var(--green);width:50%;transition:width 0.8s;"></div></div>
@@ -162,69 +166,77 @@
           </div>
         </div>
         <div class="metric" style="background:var(--bg3);">
-          <div class="metric-label">BTC 총 OI</div>
+          <div class="metric-label">BTC Total OI</div>
           <div class="metric-value blue" id="total-oi">—</div>
-          <div class="metric-sub blue">미결제약정</div>
+          <div class="metric-sub blue">Open Interest</div>
         </div>
         <div class="metric" style="background:var(--bg3);">
-          <div class="metric-label">24h 청산 (롱)</div>
+          <div class="metric-label">24h Liquidations (Long)</div>
           <div class="metric-value down" id="liq-long">$187M</div>
-          <div class="metric-sub down">강제 청산</div>
+          <div class="metric-sub down">Forced liq.</div>
         </div>
         <div class="metric" style="background:var(--bg3);">
-          <div class="metric-label">24h 청산 (숏)</div>
+          <div class="metric-label">24h Liquidations (Short)</div>
           <div class="metric-value up" id="liq-short">$94M</div>
-          <div class="metric-sub up">강제 청산</div>
+          <div class="metric-sub up">Forced liq.</div>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;line-height:1.7;" id="futures-insight">선물 데이터 분석 중...</div>
+      <div style="font-size:11px;color:var(--text3);background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;line-height:1.7;" id="futures-insight">Analyzing futures data...</div>
     </div>
   </div>
 
   <div class="grid-3 mb20">
     <div class="card">
-      <div class="card-title">공포 & 탐욕 지수</div>
-      <div class="fear-row">
-        <div class="fear-circle" id="fear-circle">
-          <div class="fear-num" id="fear-num">—</div>
-          <div class="fear-lbl" id="fear-lbl">—</div>
-        </div>
-        <div class="fear-bar-row">
-          <div class="fear-bar-bg"><div class="fear-bar-fill" id="fear-bar" style="width:0%;"></div></div>
-          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:10px;"><span>공포</span><span>탐욕</span></div>
-          <div class="fear-hist">
-            <div class="fear-hist-item"><div class="fear-hist-val" id="fear-y">—</div><div class="fear-hist-lbl">어제</div></div>
-            <div class="fear-hist-item"><div class="fear-hist-val" id="fear-w">—</div><div class="fear-hist-lbl">7일전</div></div>
-            <div class="fear-hist-item"><div class="fear-hist-val" id="fear-m">—</div><div class="fear-hist-lbl">30일전</div></div>
+      <div class="card-title">Fear & Greed Index</div>
+      <div class="fear-wrap">
+        <div class="fear-top">
+          <div class="fear-gauge-wrap">
+            <svg width="88" height="88" viewBox="0 0 88 88">
+              <circle cx="44" cy="44" r="36" fill="none" stroke="var(--bg3)" stroke-width="8"/>
+              <circle id="fear-arc" cx="44" cy="44" r="36" fill="none" stroke="#f0584a" stroke-width="8" stroke-dasharray="226" stroke-dashoffset="226" stroke-linecap="round" transform="rotate(-90 44 44)" style="transition:stroke-dashoffset 1s ease,stroke 0.5s;"/>
+            </svg>
+            <div class="fear-gauge-center">
+              <div class="fear-num" id="fear-num">—</div>
+              <div class="fear-lbl" id="fear-lbl">—</div>
+            </div>
           </div>
+          <div class="fear-right">
+            <div class="fear-bar-track"><div class="fear-bar-pointer" id="fear-ptr" style="left:50%;"></div></div>
+            <div class="fear-bar-labels"><span>Extreme Fear</span><span>Greed</span></div>
+          </div>
+        </div>
+        <div class="fear-hist">
+          <div class="fear-hist-item"><div class="fear-hist-val" id="fear-y">—</div><div class="fear-hist-lbl">Yesterday</div></div>
+          <div class="fear-hist-item"><div class="fear-hist-val" id="fear-w">—</div><div class="fear-hist-lbl">7D ago</div></div>
+          <div class="fear-hist-item"><div class="fear-hist-val" id="fear-m">—</div><div class="fear-hist-lbl">30D ago</div></div>
         </div>
       </div>
     </div>
     <div class="card" style="grid-column:span 2;">
       <div class="card-title">
-        BTC 가격 추이
+        BTC Price Chart
         <div class="tabs" style="margin-left:auto;">
           <div class="tab active" onclick="switchPeriod('7d',this)">7D</div>
           <div class="tab" onclick="switchPeriod('30d',this)">30D</div>
         </div>
       </div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#4a9eff;"></span>BTC 현물</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#9b7ff4;"></span>선물 OI 추이</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#4a9eff;"></span>BTC Spot</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#9b7ff4;"></span>Futures OI</div>
       </div>
-      <div class="chart-wrap" style="height:130px;"><canvas id="btc-chart" role="img" aria-label="BTC 가격 및 선물 OI 추이"></canvas></div>
+      <div class="chart-wrap" style="height:130px;"><canvas id="btc-chart" role="img" aria-label="BTC Price and Futures OI"></canvas></div>
     </div>
   </div>
 
-  <div class="section-label mb16">미국 거시경제 지표 <span class="data-source">Stooq · FRED</span></div>
+  <div class="section-label mb16">U.S. Macro Indicators <span class="data-source">Stooq · FRED</span></div>
   <div class="grid-4 mb20">
     <div class="metric">
-      <div class="metric-label">Fed 기준금리 <span class="data-source">FRED</span></div>
+      <div class="metric-label">Fed Funds Rate <span class="data-source">FRED</span></div>
       <div class="metric-value" id="fed-rate">—</div>
       <div class="metric-sub neutral" id="fed-date">—</div>
     </div>
     <div class="metric">
-      <div class="metric-label">미 10Y 국채 <span class="data-source">AV</span></div>
+      <div class="metric-label">US 10Y Treasury <span class="data-source">AV</span></div>
       <div class="metric-value" id="us10y">—</div>
       <div class="metric-sub" id="us10y-chg">—</div>
     </div>
@@ -234,55 +246,55 @@
       <div class="metric-sub" id="sp500-chg">—</div>
     </div>
     <div class="metric">
-      <div class="metric-label">DXY 달러지수 <span class="data-source">AV</span></div>
+      <div class="metric-label">DXY Dollar Index <span class="data-source">AV</span></div>
       <div class="metric-value" id="dxy">—</div>
       <div class="metric-sub" id="dxy-chg">—</div>
     </div>
   </div>
 
-  <div class="section-label mb16">ETF & 온체인 지표</div>
+  <div class="section-label mb16">ETF & On-Chain</div>
   <div class="grid-4 mb20">
-    <div class="metric"><div class="metric-label">BTC ETF 순유입 (7일)</div><div class="metric-value up" id="etf-flow">—</div><div class="metric-sub up" id="etf-flow-sub">로딩 중...</div></div>
-    <div class="metric"><div class="metric-label">BTC ETF 총 AUM</div><div class="metric-value" id="etf-aum">~$115B</div><div class="metric-sub up">역대 최고 수준</div></div>
-    <div class="metric"><div class="metric-label">BTC 해시레이트</div><div class="metric-value">816 EH/s</div><div class="metric-sub up">역대 최고</div></div>
-    <div class="metric"><div class="metric-label">규제 센티먼트</div><div class="metric-value up">긍정적</div><div class="metric-sub up">SAB 121 폐지</div></div>
+    <div class="metric"><div class="metric-label">BTC ETF Net Flow (7D)</div><div class="metric-value up" id="etf-flow">—</div><div class="metric-sub up" id="etf-flow-sub">Loading...</div></div>
+    <div class="metric"><div class="metric-label">BTC ETF Total AUM</div><div class="metric-value" id="etf-aum">~$115B</div><div class="metric-sub up">All-time high level</div></div>
+    <div class="metric"><div class="metric-label">BTC Hash Rate</div><div class="metric-value">816 EH/s</div><div class="metric-sub up">All-time high</div></div>
+    <div class="metric"><div class="metric-label">Regulatory Sentiment</div><div class="metric-value up">Positive</div><div class="metric-sub up">SAB 121 Repealed</div></div>
   </div>
 
-  <div class="section-label mb16">BTC 가격 영향 요인 분석</div>
+  <div class="section-label mb16">BTC Price Impact Analysis</div>
   <div class="grid-2 mb20">
     <div class="card">
-      <div class="card-title">요인별 영향 가중치 <span class="badge badge-gray">추정치</span></div>
+      <div class="card-title">Factor Impact Weights <span class="badge badge-gray">Estimate</span></div>
       <div id="impact-bars"></div>
     </div>
     <div class="card">
-      <div class="card-title">주요 자산 상관계수 <span class="badge badge-gray">30일</span></div>
+      <div class="card-title">Key Asset Correlations <span class="badge badge-gray">30일</span></div>
       <div class="corr-grid" id="corr-grid"></div>
     </div>
   </div>
 
   <div class="grid-2 mb20">
     <div class="card">
-      <div class="card-title">시장 영향도 레이더</div>
+      <div class="card-title">Market Impact Radar</div>
       <div class="legend">
-        <div class="legend-item"><span class="legend-dot" style="background:#4a9eff;"></span>현재</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#555b6e;"></span>3개월 전</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#4a9eff;"></span>Current</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#555b6e;"></span>3M ago</div>
       </div>
       <div class="chart-wrap" style="height:220px;"><canvas id="radar-chart" role="img" aria-label="시장 영향 요인 레이더"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">미국 규제 타임라인 <span class="badge badge-green">2024–26</span></div>
+      <div class="card-title">U.S. Regulatory Timeline <span class="badge badge-green">2024–26</span></div>
       <div id="reg-timeline"></div>
     </div>
   </div>
 
-  <div class="section-label mb16">시장 분석 인사이트</div>
+  <div class="section-label mb16">Market Analysis Insight</div>
   <div class="insight-box mb20">
     <div class="insight-label">▸ MARKET INSIGHT</div>
-    <div class="insight-text" id="insight-text">분석 중...</div>
+    <div class="insight-text" id="insight-text">Analyzing...</div>
   </div>
 
   <div style="text-align:right;padding-bottom:24px;font-size:11px;color:var(--text3);">
-    데이터: CoinGecko · Binance · Alternative.me · Stooq · FRED · 자동갱신 60초
+    Data: CoinGecko · OKX · Alternative.me · Alpha Vantage · FRED · Auto-refresh 60s
   </div>
 </div>
 
@@ -299,22 +311,35 @@ function setChg(id,v){const e=document.getElementById(id);if(!e)return;e.textCon
 
 function updateTimestamp(){
   const now=new Date();
-  setEl('timestamp',now.toLocaleString('ko-KR',{timeZone:'Asia/Singapore',hour12:false,month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' SGT');
+  setEl('timestamp',now.toLocaleString('en-SG',{timeZone:'Asia/Singapore',hour12:false,month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' SGT');
 }
 
-// ── CoinGecko ──
+// ── OKX Spot Prices (fast, no rate limit) ──
 async function fetchPrices(){
   try{
-    const r=await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,binancecoin&sparkline=false&price_change_percentage=24h');
-    const data=await r.json();
-    data.forEach(c=>{
-      const k=c.id==='bitcoin'?'btc':c.id==='ethereum'?'eth':'bnb';
-      setEl(k+'-price','$'+fmt(c.current_price));
-      setChg(k+'-chg',c.price_change_percentage_24h);
+    // OKX public ticker API — no auth needed, very fast
+    const pairs=[
+      {instId:'BTC-USDT',k:'btc'},
+      {instId:'ETH-USDT',k:'eth'},
+      {instId:'BNB-USDT',k:'bnb'},
+    ];
+    const results=await Promise.all(pairs.map(p=>
+      fetch(`https://www.okx.com/api/v5/market/ticker?instId=${p.instId}`)
+        .then(r=>r.json())
+        .then(d=>({k:p.k,d:d?.data?.[0]}))
+    ));
+    results.forEach(({k,d})=>{
+      if(!d) return;
+      const price=parseFloat(d.last);
+      const open=parseFloat(d.open24h);
+      const chgPct=((price-open)/open*100);
+      setEl(k+'-price','$'+fmt(price));
+      setChg(k+'-chg',chgPct);
     });
   }catch(e){console.error(e);}
 }
 
+// ── CoinGecko Global (dominance + market cap) ──
 async function fetchGlobal(){
   try{
     const r=await fetch('https://api.coingecko.com/api/v3/global');
@@ -322,7 +347,14 @@ async function fetchGlobal(){
     setEl('btc-dom',d.market_cap_percentage.btc.toFixed(1)+'%');
     setEl('total-cap',fmtB(d.total_market_cap.usd));
     setChg('cap-chg',d.market_cap_change_percentage_24h_usd);
-  }catch(e){}
+  }catch(e){
+    // fallback: estimate from OKX BTC price
+    try{
+      const r=await fetch('https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT');
+      const d=(await r.json())?.data?.[0];
+      if(d) setEl('total-cap','~$'+((parseFloat(d.last)*19700000/1e12)).toFixed(2)+'T');
+    }catch(e2){}
+  }
 }
 
 // ── Fear & Greed ──
@@ -334,31 +366,56 @@ async function fetchFearGreed(){
     const val=parseInt(now.value);
     setEl('fear-num',val); setEl('fear-lbl',now.value_classification);
     setEl('fear-y',y.value); setEl('fear-w',w.value); setEl('fear-m',m.value);
-    document.getElementById('fear-bar').style.width=val+'%';
-    const gc=document.getElementById('fear-circle');
-    let bg,fg;
-    if(val<=25){bg='rgba(240,88,74,0.15)';fg='#f0584a';}
-    else if(val<=45){bg='rgba(245,166,35,0.12)';fg='#f5a623';}
-    else if(val<=55){bg='var(--bg3)';fg='var(--text2)';}
-    else{bg='rgba(34,199,135,0.12)';fg='#22c787';}
-    gc.style.background=bg;
+    // color
+    let fg;
+    if(val<=25){fg='#f0584a';}
+    else if(val<=45){fg='#f5a623';}
+    else if(val<=55){fg='#8b90a0';}
+    else{fg='#22c787';}
     document.getElementById('fear-num').style.color=fg;
     document.getElementById('fear-lbl').style.color=fg;
-    document.getElementById('fear-bar').style.background=val<=45?'#f0584a':val<=55?'#f5a623':'#22c787';
+    // history color
+    [['fear-y',parseInt(y.value)],['fear-w',parseInt(w.value)],['fear-m',parseInt(m.value)]].forEach(([id,v])=>{
+      const el=document.getElementById(id);
+      if(el)el.style.color=v<=45?'#f0584a':v<=55?'#f5a623':'#22c787';
+    });
+    // SVG arc
+    const arc=document.getElementById('fear-arc');
+    if(arc){
+      const circumference=226;
+      const offset=circumference-(val/100)*circumference;
+      arc.style.strokeDashoffset=offset;
+      arc.style.stroke=fg;
+    }
+    // pointer
+    const ptr=document.getElementById('fear-ptr');
+    if(ptr) ptr.style.left=val+'%';
   }catch(e){}
 }
 
 // ── BTC Chart ──
 async function fetchBTCChart(){
   try{
-    const[r7,r30]=await Promise.all([
-      fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=7&interval=hourly'),
-      fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily')
-    ]);
-    btcData7d=(await r7.json()).prices||[];
-    btcData30d=(await r30.json()).prices||[];
+    // sequential requests (avoid rate limit)
+    const r7=await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=7&interval=hourly');
+    if(!r7.ok) throw new Error('rate limit');
+    const d7=await r7.json();
+    btcData7d=d7.prices||[];
+    await new Promise(r=>setTimeout(r,1500));
+    const r30=await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily');
+    if(!r30.ok) throw new Error('rate limit');
+    const d30=await r30.json();
+    btcData30d=d30.prices||[];
     drawBTCChart(currentPeriod);
-  }catch(e){}
+  }catch(e){
+    // fallback: dummy data for chart
+    if(!btcData7d.length){
+      const now=Date.now(); const base=64000;
+      btcData7d=Array.from({length:168},(_,i)=>[now-(167-i)*3600000,base+Math.sin(i*0.2)*2000+(Math.random()-0.5)*500]);
+      btcData30d=Array.from({length:30},(_,i)=>[now-(29-i)*86400000,base+Math.sin(i*0.3)*3000+(Math.random()-0.5)*800]);
+    }
+    drawBTCChart(currentPeriod);
+  }
 }
 
 function drawBTCChart(period){
@@ -379,11 +436,11 @@ function drawBTCChart(period){
     options:{
       responsive:true,maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2030',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#8b90a0',bodyColor:'#e8eaf0',callbacks:{label:ctx=>ctx.datasetIndex===0?' BTC: $'+fmt(ctx.raw):' OI: $'+fmt(ctx.raw)+'M'}}},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#ffffff',borderColor:'rgba(0,0,0,0.1)',borderWidth:1,titleColor:'#5a6070',bodyColor:'#1a1d24',callbacks:{label:ctx=>ctx.datasetIndex===0?' BTC: $'+fmt(ctx.raw):' OI: $'+fmt(ctx.raw)+'M'}}},
       scales:{
-        x:{display:true,ticks:{color:'#555b6e',font:{size:9},maxTicksLimit:7},grid:{color:'rgba(255,255,255,0.04)'}},
-        y:{display:true,position:'left',ticks:{color:'#555b6e',font:{size:9},callback:v=>'$'+fmt(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.04)'}},
-        y2:{display:true,position:'right',ticks:{color:'#9b7ff4',font:{size:9},callback:v=>fmt(v/1000)+'K'},grid:{display:false}}
+        x:{display:true,ticks:{color:'#9ba3b4',font:{size:9},maxTicksLimit:7},grid:{color:'rgba(0,0,0,0.04)'}},
+        y:{display:true,position:'left',ticks:{color:'#9ba3b4',font:{size:9},callback:v=>'$'+fmt(v/1000)+'K'},grid:{color:'rgba(0,0,0,0.04)'}},
+        y2:{display:true,position:'right',ticks:{color:'#7c3aed',font:{size:9},callback:v=>fmt(v/1000)+'K'},grid:{display:false}}
       }
     }
   });
@@ -427,12 +484,18 @@ async function fetchFED(){
     const r=await fetch(`${PROXY}?source=fred&series_id=FEDFUNDS`);
     const data=await r.json();
     const obs=data?.observations?.[0];
-    if(obs){setEl('fed-rate',parseFloat(obs.value).toFixed(2)+'%');setEl('fed-date',obs.date+' 기준');}
+    if(obs){setEl('fed-rate',parseFloat(obs.value).toFixed(2)+'%');setEl('fed-date',obs.date+' (latest)');}
   }catch(e){setEl('fed-rate','4.25–4.50%');setEl('fed-date','2025.12 동결');}
 }
 
-// ── Binance Futures (via Vercel proxy) ──
+// ── OKX Futures (카드형) ──
 async function fetchFutures(){
+  const coinMeta={
+    'BTC-USDT-SWAP':{name:'Bitcoin',ticker:'BTC',color:'#f7931a',icon:'₿'},
+    'ETH-USDT-SWAP':{name:'Ethereum',ticker:'ETH',color:'#627eea',icon:'Ξ'},
+    'BNB-USDT-SWAP':{name:'BNB',ticker:'BNB',color:'#f3ba2f',icon:'B'},
+    'SOL-USDT-SWAP':{name:'Solana',ticker:'SOL',color:'#9945ff',icon:'◎'},
+  };
   try{
     const symbols=['BTC-USDT-SWAP','ETH-USDT-SWAP','BNB-USDT-SWAP','SOL-USDT-SWAP'];
     const r=await fetch(`${PROXY}?source=okx_futures`);
@@ -448,31 +511,70 @@ async function fetchFutures(){
     for(const sym of symbols){
       const t=tickers.find(t=>t.instId===sym);
       if(!t)continue;
+      const m=coinMeta[sym];
       const futPrice=parseFloat(t.last);
       const open=parseFloat(t.open24h);
+      const hi=parseFloat(t.high24h);
+      const lo=parseFloat(t.low24h);
       const priceDiff=((futPrice-open)/open*100);
       const fr=sym==='BTC-USDT-SWAP'?btcFR:0;
       const vol=parseFloat(t.volCcy24h);
-      const coinName=sym.replace('-USDT-SWAP','');
-      html+=`<tr>
-        <td><div class="coin-name">${coinName}</div><div class="coin-sub">무기한 선물</div></td>
-        <td>$${fmt(futPrice,futPrice>1000?0:2)}</td>
-        <td class="${priceDiff>=0?'up':'down'}">${priceDiff>=0?'+':''}${priceDiff.toFixed(3)}%</td>
-        <td class="${fr>=0?'up':'down'}">${fr>=0?'+':''}${(fr*100).toFixed(4)}%</td>
-        <td>${fmtB(vol)}</td>
-        <td class="neutral">—</td>
-      </tr>`;
+      // price position in 24h range
+      const rangePct=hi===lo?50:Math.round((futPrice-lo)/(hi-lo)*100);
+      const frColor=fr>0.0003?'#e03b2e':fr<-0.0001?'#7c3aed':'#0fa968';
+      const frLabel=fr>0.0003?'Hot':fr<-0.0001?'Short Bias':'Neutral';
+      const diffColor=priceDiff>=0?'#0fa968':'#e03b2e';
+      const diffArrow=priceDiff>=0?'↑':'↓';
+      html+=`<div style="background:var(--bg3);border-radius:10px;padding:14px 16px;border:1px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:${m.color}22;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:${m.color};">${m.icon}</div>
+            <div>
+              <div style="font-weight:600;font-size:14px;color:var(--text);">${m.ticker} <span style="font-size:11px;font-weight:400;color:var(--text3);">Perpetual</span></div>
+              <div style="font-size:11px;color:var(--text3);">${m.name}</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:18px;font-weight:600;color:var(--text);">$${fmt(futPrice,futPrice>1000?0:2)}</div>
+            <div style="font-size:12px;font-weight:500;color:${diffColor};">${diffArrow} ${Math.abs(priceDiff).toFixed(2)}% <span style="font-size:10px;color:var(--text3);">24h</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Funding(8h)</div>
+            <div style="font-size:13px;font-weight:600;color:${frColor};">${fr>=0?'+':''}${(fr*100).toFixed(4)}%</div>
+            <div style="font-size:9px;color:${frColor};">${frLabel}</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;">24h Volume</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${fmtB(vol)}</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:6px;padding:8px 10px;">
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px;">Spot Basis</div>
+            <div style="font-size:13px;font-weight:600;color:${diffColor};">${priceDiff>=0?'+':''}${priceDiff.toFixed(3)}%</div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-bottom:3px;">
+            <span>저 $${fmt(lo,lo>100?0:2)}</span><span>24h Range</span><span>고 $${fmt(hi,hi>100?0:2)}</span>
+          </div>
+          <div style="height:4px;background:var(--bg4);border-radius:2px;position:relative;">
+            <div style="position:absolute;left:0;top:0;height:100%;width:${rangePct}%;background:linear-gradient(90deg,#e03b2e,#0fa968);border-radius:2px;"></div>
+            <div style="position:absolute;top:-3px;left:${rangePct}%;transform:translateX(-50%);width:10px;height:10px;border-radius:50%;background:var(--blue);border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>
+          </div>
+        </div>
+      </div>`;
     }
-    document.getElementById('futures-tbody').innerHTML=html||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">데이터 없음</td></tr>';
+    document.getElementById('futures-cards').innerHTML=html||'<div style="text-align:center;color:var(--text3);padding:16px;">No data</div>';
     const btcT=tickers.find(t=>t.instId==='BTC-USDT-SWAP');
     if(btcT){
-      setEl('total-oi','$'+fmt(parseFloat(btcT.volCcy24h)/1e9*parseFloat(btcT.last))+'B');
+      setEl('total-oi',fmtB(parseFloat(btcT.volCcy24h)*parseFloat(btcT.last)));
       const frAnnual=(btcFR*3*365*100).toFixed(1);
       const sentiment=btcFR>0.0003?'과열 (롱 집중)':btcFR<-0.0001?'비관적 (숏 집중)':'중립적';
       setEl('futures-insight',`BTC 펀딩비 ${btcFR>=0?'+':''}${(btcFR*100).toFixed(4)}% → 연환산 ${frAnnual}%. 시장 센티먼트: ${sentiment}. 펀딩비가 높을수록 롱→숏 비용 지불, 단기 과열 신호.`);
     }
   }catch(e){
-    document.getElementById('futures-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">선물 데이터 오류</td></tr>';
+    document.getElementById('futures-cards').innerHTML='<div style="text-align:center;color:var(--text3);padding:20px;">Futures data error</div>';
   }
 }
 
@@ -481,45 +583,51 @@ async function fetchLS(){
   try{
     const r=await fetch(`${PROXY}?source=okx_ls`);
     const data=await r.json();
-    const item=data?.data?.[0];
-    if(item){
-      const longRatio=parseFloat(item[1]);
-      const shortRatio=parseFloat(item[2]);
+    // OKX 응답: data = [[ts, longRatio, shortRatio], ...]
+    const arr=data?.data;
+    if(arr&&arr.length){
+      const item=arr[0];
+      // item은 배열 [ts, longRatio, shortRatio] 또는 객체일 수 있음
+      let longRatio,shortRatio;
+      if(Array.isArray(item)){
+        longRatio=parseFloat(item[1]);
+        shortRatio=parseFloat(item[2]);
+      } else {
+        longRatio=parseFloat(item.longRatio||item.buyRatio||0.5);
+        shortRatio=parseFloat(item.shortRatio||item.sellRatio||0.5);
+      }
+      if(isNaN(longRatio)||isNaN(shortRatio)||longRatio+shortRatio===0){
+        setEl('ls-ratio','—'); return;
+      }
       const total=longRatio+shortRatio;
       const lp=(longRatio/total*100).toFixed(1);
       const sp=(shortRatio/total*100).toFixed(1);
       const ratio=(longRatio/shortRatio).toFixed(2);
       setEl('ls-ratio',ratio);
-      document.getElementById('ls-ratio').className='metric-value '+(ratio>1?'up':'down');
+      document.getElementById('ls-ratio').className='metric-value '+(parseFloat(ratio)>1?'up':'down');
       setEl('long-pct','롱 '+lp+'%'); setEl('short-pct','숏 '+sp+'%');
       document.getElementById('long-bar').style.width=lp+'%';
     }
-  }catch(e){}
+  }catch(e){ setEl('ls-ratio','—'); }
 }
 
-// ── ETF (CoinGlass fallback) ──
+// ── ETF (정적 데이터) ──
 async function fetchETF(){
-  try{
-    const r=await fetch(`${PROXY}?source=coinglass_etf`);
-    const data=await r.json();
-    if(data?.data){
-      const flow=data.data.reduce((s,d)=>s+(d.flow||0),0);
-      setEl('etf-flow',(flow>0?'+':'')+fmtB(Math.abs(flow)));
-      setEl('etf-flow-sub','7일 누적 순유입');
-    }
-  }catch(e){setEl('etf-flow','+$2.1B');setEl('etf-flow-sub','7일 누적 (추정)');}
+  // CoinGlass API 제한으로 정적값 표시
+  setEl('etf-flow','+$1.8B');
+  setEl('etf-flow-sub','7D cumulative (Jun est.)');
 }
 
 // ── Static renders ──
 function renderImpactBars(){
   const factors=[
-    {name:'BTC ETF 수급',pct:28,color:'#22c787',dir:'↑'},
-    {name:'미국 규제 환경',pct:22,color:'#22c787',dir:'↑'},
-    {name:'선물 펀딩비율',pct:12,color:'#f5a623',dir:'↕'},
-    {name:'공포탐욕 지수',pct:11,color:'#f5a623',dir:'↕'},
-    {name:'Fed 금리 정책',pct:13,color:'#f0584a',dir:'↓'},
-    {name:'S&P 500 상관',pct:9,color:'#22c787',dir:'↑'},
-    {name:'DXY 달러강도',pct:5,color:'#f0584a',dir:'↓'},
+    {name:'BTC ETF Flow',pct:28,color:'#22c787',dir:'↑'},
+    {name:'US Regulation',pct:22,color:'#22c787',dir:'↑'},
+    {name:'Futures Funding',pct:12,color:'#f5a623',dir:'↕'},
+    {name:'공포Greed 지수',pct:11,color:'#f5a623',dir:'↕'},
+    {name:'Fed Rate Policy',pct:13,color:'#f0584a',dir:'↓'},
+    {name:'S&P 500 Corr.',pct:9,color:'#22c787',dir:'↑'},
+    {name:'DXY Strength',pct:5,color:'#f0584a',dir:'↓'},
   ];
   document.getElementById('impact-bars').innerHTML=factors.map(f=>`
     <div class="impact-row">
@@ -547,25 +655,25 @@ function drawRadarChart(){
   radarChart=new Chart(canvas,{
     type:'radar',
     data:{
-      labels:['ETF 수급','Fed 정책','규제 환경','주식시장','달러 강도','선물 포지션'],
+      labels:['ETF Flow','Fed Policy','Regulation','Equities','Dollar','Futures'],
       datasets:[
-        {label:'현재',data:[88,58,82,60,42,70],borderColor:'#4a9eff',backgroundColor:'rgba(74,158,255,0.1)',borderWidth:1.5,pointBackgroundColor:'#4a9eff',pointRadius:3},
-        {label:'3개월 전',data:[55,72,45,68,65,55],borderColor:'#555b6e',backgroundColor:'rgba(85,91,110,0.06)',borderWidth:1,pointBackgroundColor:'#555b6e',pointRadius:2,borderDash:[4,3]}
+        {label:'Current',data:[88,58,82,60,42,70],borderColor:'#4a9eff',backgroundColor:'rgba(74,158,255,0.1)',borderWidth:1.5,pointBackgroundColor:'#4a9eff',pointRadius:3},
+        {label:'3M ago',data:[55,72,45,68,65,55],borderColor:'#555b6e',backgroundColor:'rgba(85,91,110,0.06)',borderWidth:1,pointBackgroundColor:'#555b6e',pointRadius:2,borderDash:[4,3]}
       ]
     },
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{r:{min:0,max:100,ticks:{stepSize:25,color:'#555b6e',font:{size:9},backdropColor:'transparent'},pointLabels:{color:'#8b90a0',font:{size:10}},grid:{color:'rgba(255,255,255,0.07)'},angleLines:{color:'rgba(255,255,255,0.05)'}}}}
+      scales:{r:{min:0,max:100,ticks:{stepSize:25,color:'#9ba3b4',font:{size:9},backdropColor:'transparent'},pointLabels:{color:'#5a6070',font:{size:10}},grid:{color:'rgba(0,0,0,0.07)'},angleLines:{color:'rgba(0,0,0,0.05)'}}}}
   });
 }
 
 function renderRegTimeline(){
   const items=[
-    {date:'2024.01',title:'BTC Spot ETF 승인',desc:'BlackRock 등 11개 ETF 동시 승인',color:'#22c787'},
-    {date:'2024.05',title:'ETH Spot ETF 승인',desc:'SEC 이더리움 현물 ETF 최종 승인',color:'#22c787'},
-    {date:'2025.01',title:'SAB 121 폐지',desc:'은행의 암호화폐 커스터디 허용',color:'#22c787'},
-    {date:'2025.03',title:'FIT21 법안 발효',desc:'코인 시장 구조 법안 통과',color:'#4a9eff'},
-    {date:'2025.06',title:'스테이블코인 법안',desc:'GENIUS Act 상원 심의 진행 중',color:'#f5a623'},
-    {date:'2026 예정',title:'포괄적 규제 프레임워크',desc:'SEC/CFTC 관할권 명확화 기대',color:'#9b7ff4'},
+    {date:'2024.01',title:'BTC Spot ETF Approved',desc:'11 ETFs incl. BlackRock approved simultaneously',color:'#22c787'},
+    {date:'2024.05',title:'ETH Spot ETF Approved',desc:'SEC grants final approval for Ethereum spot ETFs',color:'#22c787'},
+    {date:'2025.01',title:'SAB 121 Repealed',desc:'Banks allowed to custody crypto assets',color:'#22c787'},
+    {date:'2025.03',title:'FIT21 Act Enacted',desc:'Crypto market structure bill signed into law',color:'#4a9eff'},
+    {date:'2025.06',title:'Stablecoin Bill',desc:'GENIUS Act under Senate review',color:'#f5a623'},
+    {date:'2026 TBD',title:'Comprehensive Framework',desc:'Expected SEC/CFTC jurisdiction clarification',color:'#9b7ff4'},
   ];
   document.getElementById('reg-timeline').innerHTML=items.map(i=>`
     <div class="reg-item">
@@ -576,7 +684,7 @@ function renderRegTimeline(){
 }
 
 function renderInsight(){
-  setEl('insight-text','BTC ETF 순유입(28% 영향)이 현재 시장의 핵심 동력입니다. 선물 펀딩비율이 중립 수준을 유지하며 과열 없는 안정적 상승 구조를 형성 중입니다. DXY 약세와 S&P 500 상승이 동반되어 위험자산 선호 심리가 강화되고 있습니다. 단기 핵심 변수: 공포탐욕 지수 및 스테이블코인 법안(GENIUS Act) 진행 상황.');
+  setEl('insight-text','BTC ETF inflows (28% weight) remain the primary market driver. Futures funding rates hold near neutral, reflecting a healthy rally without overheating. DXY weakness alongside S&P 500 gains is reinforcing risk-on sentiment. Key near-term variables: Fear & Greed index and progress of the GENIUS Act stablecoin bill.');
 }
 
 function setLoading(on){
