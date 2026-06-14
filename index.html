@@ -216,7 +216,7 @@
     </div>
   </div>
 
-  <div class="section-label mb16">미국 거시경제 지표 <span class="data-source">Yahoo Finance · FRED</span></div>
+  <div class="section-label mb16">미국 거시경제 지표 <span class="data-source">Stooq · FRED</span></div>
   <div class="grid-4 mb20">
     <div class="metric">
       <div class="metric-label">Fed 기준금리 <span class="data-source">FRED</span></div>
@@ -282,7 +282,7 @@
   </div>
 
   <div style="text-align:right;padding-bottom:24px;font-size:11px;color:var(--text3);">
-    데이터: CoinGecko · Binance · Alternative.me · Yahoo Finance · FRED · 자동갱신 60초
+    데이터: CoinGecko · Binance · Alternative.me · Stooq · FRED · 자동갱신 60초
   </div>
 </div>
 
@@ -397,19 +397,25 @@ function switchPeriod(p,el){
 // ── Yahoo Finance (via Vercel proxy) ──
 async function fetchMacro(){
   try{
-    const symbols=['^GSPC','^TNX','DX-Y.NYB'].join(',');
-    const r=await fetch(`${PROXY}?source=stooq&symbols=${encodeURIComponent(symbols)}`);
-    const data=await r.json();
-    const results=data?.quoteResponse?.result||[];
-    results.forEach(q=>{
-      const price=q.regularMarketPrice;
-      const chg=q.regularMarketChangePercent;
-      if(q.symbol==='^GSPC'){setEl('sp500',fmt(price));setChg('sp500-chg',chg);}
-      if(q.symbol==='^TNX'){setEl('us10y',price.toFixed(2)+'%');setChg('us10y-chg',chg);}
-      if(q.symbol==='DX-Y.NYB'){setEl('dxy',price.toFixed(1));setChg('dxy-chg',chg);}
-    });
+    // stooq.com - S&P500, US10Y, DXY
+    const pairs = [
+      { sym: '^spx', id: 'sp500', chgId: 'sp500-chg', fmt: v=>fmt(v), pct: true },
+      { sym: '^tnx', id: 'us10y', chgId: 'us10y-chg', fmt: v=>v.toFixed(2)+'%', pct: true },
+      { sym: 'dxy.f', id: 'dxy', chgId: 'dxy-chg', fmt: v=>v.toFixed(1), pct: true },
+    ];
+    await Promise.all(pairs.map(async p=>{
+      try{
+        const r=await fetch(`${PROXY}?source=stooq&symbols=${p.sym}`);
+        const data=await r.json();
+        const q=data?.symbols?.[0];
+        if(q&&q.close){
+          setEl(p.id, p.fmt(q.close));
+          const chgPct = q.open ? ((q.close-q.open)/q.open*100) : 0;
+          setChg(p.chgId, chgPct);
+        }
+      }catch(e){}
+    }));
   }catch(e){
-    // fallback static
     setEl('sp500','5,473'); setEl('us10y','4.28%'); setEl('dxy','98.7');
     document.getElementById('sp500-chg').textContent='▲ +0.42%'; document.getElementById('sp500-chg').className='metric-sub up';
     document.getElementById('us10y-chg').textContent='▼ -0.03%'; document.getElementById('us10y-chg').className='metric-sub down';
@@ -470,7 +476,7 @@ async function fetchFutures(){
     const sentiment=btcFR>0.0003?'과열 (롱 집중)':btcFR<-0.0001?'비관적 (숏 집중)':'중립적';
     setEl('futures-insight',`BTC 펀딩비 ${btcFR>=0?'+':''}${(btcFR*100).toFixed(4)}% → 연환산 ${frAnnual}%. 시장 센티먼트: ${sentiment}. 펀딩비가 높을수록 롱→숏 비용 지불, 단기 과열 신호.`);
   }catch(e){
-    document.getElementById('futures-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">Vercel 배포 후 선물 데이터 활성화됩니다</td></tr>';
+    document.getElementById('futures-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">데이터 로딩 중...</td></tr>';
   }
 }
 
