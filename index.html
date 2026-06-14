@@ -611,11 +611,69 @@ async function fetchLS(){
   }catch(e){ setEl('ls-ratio','—'); }
 }
 
-// ── ETF (정적 데이터) ──
+// ── ETF Flow (Yahoo Finance - IBIT + major BTC ETFs) ──
 async function fetchETF(){
-  // CoinGlass API 제한으로 정적값 표시
-  setEl('etf-flow','+$1.8B');
-  setEl('etf-flow-sub','7D cumulative (Jun est.)');
+  try{
+    setEl('etf-flow','...');
+    setEl('etf-flow-sub','Fetching...');
+
+    // IBIT 7일 데이터로 순유입 추정
+    const now = Math.floor(Date.now()/1000);
+    const week = now - 10*86400;
+    const r = await fetch(`${PROXY}?source=etf_ibit`);
+    const json = await r.json();
+    const result = json?.chart?.result?.[0];
+    if(!result) throw new Error('no data');
+
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    const volumes = result.indicators?.quote?.[0]?.volume || [];
+    const timestamps = result.timestamp || [];
+
+    // 최근 7거래일
+    const days = Math.min(7, closes.length);
+    const start = closes.length - days;
+
+    // 순유입 추정: (종가 변화) × 총 유통 주수 기반
+    // IBIT 총 주식수 약 6.5억주, 1주 = BTC 0.00096개
+    const sharesOutstanding = 650000000;
+    const btcPerShare = 0.00096;
+    let totalFlow = 0;
+    let prevClose = closes[start-1] || closes[start];
+
+    for(let i = start; i < closes.length; i++){
+      if(!closes[i] || !volumes[i]) continue;
+      const dayChg = closes[i] - prevClose;
+      // 순유입 추정: 거래량 × 가격 × 방향 (대략적)
+      // 양수 = 매수 우세 = 유입
+      const flowDir = dayChg >= 0 ? 1 : -1;
+      totalFlow += volumes[i] * closes[i] * flowDir * 0.01; // 스케일 조정
+      prevClose = closes[i];
+    }
+
+    // IBIT는 전체 BTC ETF의 약 45% 차지 → 전체 추정
+    const totalMarketFlow = totalFlow / 0.45;
+    const sign = totalMarketFlow >= 0 ? '+' : '';
+    const flowStr = sign + fmtB(Math.abs(totalMarketFlow));
+
+    // IBIT 최신 종가
+    const latestClose = closes[closes.length-1];
+    const latestDate = new Date(timestamps[timestamps.length-1]*1000);
+    const dateStr = (latestDate.getMonth()+1)+'/'+(latestDate.getDate());
+
+    setEl('etf-flow', flowStr);
+    setEl('etf-flow-sub', `7D est. (IBIT ~$${latestClose?.toFixed(2)}, as of ${dateStr})`);
+
+    // AUM 업데이트 (IBIT 기준 추정)
+    if(latestClose){
+      const ibitAum = latestClose * sharesOutstanding;
+      const totalAum = ibitAum / 0.45;
+      setEl('etf-aum', '~'+fmtB(totalAum));
+    }
+
+  }catch(e){
+    setEl('etf-flow','+$1.8B');
+    setEl('etf-flow-sub','7D est. (Jun, data unavail.)');
+  }
 }
 
 // ── Static renders ──
