@@ -435,58 +435,52 @@ async function fetchFED(){
 async function fetchFutures(){
   try{
     const symbols=['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT'];
-    const[tickerR,fundR,oiR]=await Promise.all([
-      fetch(`${PROXY}?source=binance_futures&path=/fapi/v1/ticker/24hr`),
-      fetch(`${PROXY}?source=binance_futures&path=/fapi/v1/premiumIndex`),
-      fetch(`${PROXY}?source=binance_futures&path=/fapi/v1/openInterest?symbol=BTCUSDT`)
-    ]);
-    const tickers=await tickerR.json();
-    const fundings=await fundR.json();
-    const oiData=await oiR.json();
-    const fundMap={};
-    fundings.forEach(f=>{fundMap[f.symbol]=parseFloat(f.lastFundingRate);});
+    const r=await fetch(`${PROXY}?source=bybit_futures`);
+    const data=await r.json();
+    const tickers=(data?.result?.list||[]);
     let html='';
     for(const sym of symbols){
       const t=tickers.find(t=>t.symbol===sym);
       if(!t)continue;
       const futPrice=parseFloat(t.lastPrice);
-      const fr=fundMap[sym]||0;
+      const fr=parseFloat(t.fundingRate||0);
       const frPct=(fr*100).toFixed(4);
-      const oi=parseFloat(t.openInterest||0);
-      const oiUsd=oi*futPrice;
-      const oiChg=(Math.random()*6-2).toFixed(2);
+      const oiUsd=parseFloat(t.openInterestValue||0);
+      const oiChg=parseFloat(t.openInterest24h||0);
       const coinName=sym.replace('USDT','');
       html+=`<tr>
         <td><div class="coin-name">${coinName}</div><div class="coin-sub">무기한 선물</div></td>
         <td>$${fmt(futPrice,futPrice>1000?0:2)}</td>
-        <td class="${fr>=0?'up':'down'}">${fr>=0?'+':''} ${(fr*100).toFixed(3)}%</td>
+        <td class="${fr>=0?'up':'down'}">${fr>=0?'+':''}${(fr*100).toFixed(3)}%</td>
         <td class="${fr>=0?'up':'down'}">${fr>=0?'+':''}${frPct}%</td>
         <td>${fmtB(oiUsd)}</td>
-        <td class="${oiChg>=0?'up':'down'}">${oiChg>=0?'+':''}${oiChg}%</td>
+        <td class="neutral">—</td>
       </tr>`;
     }
     document.getElementById('futures-tbody').innerHTML=html||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:16px;">데이터 없음</td></tr>';
-    const btcOI=parseFloat(oiData.openInterest||0);
-    const btcPrice=parseFloat(tickers.find(t=>t.symbol==='BTCUSDT')?.lastPrice||0);
-    setEl('total-oi',fmtB(btcOI*btcPrice));
-    const btcFR=fundMap['BTCUSDT']||0;
-    const frAnnual=(btcFR*3*365*100).toFixed(1);
-    const sentiment=btcFR>0.0003?'과열 (롱 집중)':btcFR<-0.0001?'비관적 (숏 집중)':'중립적';
-    setEl('futures-insight',`BTC 펀딩비 ${btcFR>=0?'+':''}${(btcFR*100).toFixed(4)}% → 연환산 ${frAnnual}%. 시장 센티먼트: ${sentiment}. 펀딩비가 높을수록 롱→숏 비용 지불, 단기 과열 신호.`);
+    const btcT=tickers.find(t=>t.symbol==='BTCUSDT');
+    if(btcT){
+      setEl('total-oi',fmtB(parseFloat(btcT.openInterestValue||0)));
+      const btcFR=parseFloat(btcT.fundingRate||0);
+      const frAnnual=(btcFR*3*365*100).toFixed(1);
+      const sentiment=btcFR>0.0003?'과열 (롱 집중)':btcFR<-0.0001?'비관적 (숏 집중)':'중립적';
+      setEl('futures-insight',`BTC 펀딩비 ${btcFR>=0?'+':''}${(btcFR*100).toFixed(4)}% → 연환산 ${frAnnual}%. 시장 센티먼트: ${sentiment}. 펀딩비가 높을수록 롱→숏 비용 지불, 단기 과열 신호.`);
+    }
   }catch(e){
-    document.getElementById('futures-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">데이터 로딩 중...</td></tr>';
+    document.getElementById('futures-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px;">선물 데이터 오류</td></tr>';
   }
 }
 
-// ── Long/Short ──
+// ── Long/Short (Bybit) ──
 async function fetchLS(){
   try{
-    const r=await fetch(`${PROXY}?source=binance_ls`);
+    const r=await fetch(`${PROXY}?source=bybit_ls`);
     const data=await r.json();
-    if(data&&data[0]){
-      const ratio=parseFloat(data[0].longShortRatio);
-      const lp=(ratio/(1+ratio)*100).toFixed(1);
-      const sp=(100-lp).toFixed(1);
+    const item=data?.result?.list?.[0];
+    if(item){
+      const ratio=parseFloat(item.buyRatio)/parseFloat(item.sellRatio);
+      const lp=(parseFloat(item.buyRatio)*100).toFixed(1);
+      const sp=(parseFloat(item.sellRatio)*100).toFixed(1);
       setEl('ls-ratio',ratio.toFixed(2));
       document.getElementById('ls-ratio').className='metric-value '+(ratio>1?'up':'down');
       setEl('long-pct','롱 '+lp+'%'); setEl('short-pct','숏 '+sp+'%');
