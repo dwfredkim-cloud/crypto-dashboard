@@ -398,7 +398,7 @@ function switchPeriod(p,el){
 async function fetchMacro(){
   try{
     const symbols=['^GSPC','^TNX','DX-Y.NYB'].join(',');
-    const r=await fetch(`${PROXY}?source=yahoo_quote&symbols=${encodeURIComponent(symbols)}`);
+    const r=await fetch(`${PROXY}?source=stooq&symbols=${encodeURIComponent(symbols)}`);
     const data=await r.json();
     const results=data?.quoteResponse?.result||[];
     results.forEach(q=>{
